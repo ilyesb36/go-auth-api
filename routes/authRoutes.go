@@ -7,7 +7,7 @@ import (
 )
 
 func AuthRoutes(r *gin.Engine) {
-	authGroup := r.Group("/fcd03abc-eca5-4cec-99c1-ab79b571e90f/auth")
+	authGroup := r.Group("/fcd03abc-eca5-4cec-99c1-ab79b571e90f")
 	{
 		authGroup.POST("/register", controllers.Register)
 		authGroup.POST("/login", controllers.Login)
