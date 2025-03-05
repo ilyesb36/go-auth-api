@@ -14,5 +14,8 @@ func main() {
 
 	routes.AuthRoutes(r)
 
-	r.Run(":8080")
+	err := r.Run(":8080")
+	if err != nil {
+		panic(err)
+	}
 }

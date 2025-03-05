@@ -29,4 +29,4 @@ jobs:
         version: 'v1.51.2'
 
     - name: Run golangci-lint
-      run: golangci-lint run
+      run: golangci-lint run ./go-auth-api
