@@ -36,7 +36,7 @@ func Register(c *gin.Context) {
 	user.Password = string(hashedPassword)
 	users = append(users, user)
 
-	c.JSON(http.StatusOK, gin.H{"message": "Inscription réussie"})
+	c.JSON(http.StatusCreated, gin.H{"message": "Inscription réussie"})
 }
 
 func Login(c *gin.Context) {
