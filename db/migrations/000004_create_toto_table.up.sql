@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS toto (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    code TEXT NOT NULL
+);

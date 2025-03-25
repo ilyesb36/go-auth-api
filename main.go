@@ -15,6 +15,8 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
+	config.ApplyMigrations()
+
 	db := config.ConnectDB()
 	defer db.Close()
 

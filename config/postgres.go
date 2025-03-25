@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"strings"
 	_ "github.com/lib/pq"
 )
 
@@ -29,4 +31,34 @@ func ConnectDB() *sql.DB {
 
 	log.Println("Connexion à la base de données réussie!")
 	return db
+}
+
+func ApplyMigrations() {
+	host := strings.TrimSpace(os.Getenv("DB_HOST"))
+	port := strings.TrimSpace(os.Getenv("DB_PORT"))
+	dbname := strings.TrimSpace(os.Getenv("DB_NAME"))
+	user := strings.TrimSpace(os.Getenv("DB_USER"))
+	password := strings.TrimSpace(os.Getenv("DB_PASSWORD"))
+	migrateVersion := strings.TrimSpace(os.Getenv("CD_MIGRATION"))
+	fmt.Println("Application des migrations...")
+	connect_string := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", user, password, host, port, dbname)
+	var cmd *exec.Cmd
+
+	if migrateVersion == "" {
+		cmd = exec.Command("migrate", "-database",connect_string , "-path", "db/migrations","up")
+	}else{
+		migrateVersion = fmt.Sprintf("%06s", migrateVersion)
+		fmt.Println("migrateVersion:", migrateVersion)
+		cmd = exec.Command("migrate", "-database",connect_string , "-path", "db/migrations","goto", migrateVersion)
+	}
+	
+	
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		log.Fatal("Erreur lors de l'application des migrations :", err)
+	}
+
+	fmt.Println("Migrations appliquées avec succès.")
 }
