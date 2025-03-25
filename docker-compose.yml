@@ -8,28 +8,9 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=goauthdb
-      - POSTGRES_USER=goauthuser
-      - POSTGRES_PASSWORD=secret
-      - JWT_SECRET=your-secret-key
-    depends_on:
-      - db
-
-  # PostgreSQL
-  db:
-    image: postgres:13
-    container_name: postgres
-    environment:
-      - POSTGRES_DB=goauthdb
-      - POSTGRES_USER=goauthuser
-      - POSTGRES_PASSWORD=secret
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
-    driver: local
+      - DB_HOST=dpg-cvh6kq2qgecs73co864g-a.frankfurt-postgres.render.com
+      - DB_PORT=5432
+      - DB_USER=go_auth_rjmb_user
+      - DB_PASSWORD=3giMIX1iapePBIultinRZ2YQvxwUifFT
+      - DB_NAME=go_auth_rjmb
+      - JWT_SECRET=salutjwtgo

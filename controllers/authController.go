@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 	"log"
+	"fmt"
+	"math/rand"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -14,6 +16,8 @@ import (
 	"github.com/ilyesb36/go-auth-api/models"
 	"github.com/ilyesb36/go-auth-api/utils"
 )
+
+var resetCodes = make(map[string]string)
 
 func Register(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -113,7 +117,6 @@ func Logout(db *sql.DB) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"message": "Session terminée"})
 	}
 }
-
 func ForgotPassword(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var request struct {
@@ -125,26 +128,31 @@ func ForgotPassword(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		// Toujours renvoyer un message générique pour ne pas révéler si l'email est valide
 		user, err := config.GetUserByEmail(db, request.Email)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusOK, gin.H{"message": "Un code a été envoyé à votre adresse mail"})
 			return
 		}
 
-		token, err := utils.GenerateResetToken(user.Email)
+		code := fmt.Sprintf("%06d", rand.Intn(1000000))
+		expiresAt := time.Now().Add(5 * time.Minute)
+		err = config.InsertResetCode(db, user.Email, code, expiresAt)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la génération du token"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur enregistrement code"})
 			return
 		}
+		_ = utils.SendResetCodeEmail(user.Email, code)
 
-		c.JSON(http.StatusOK, gin.H{"message": "Token généré", "reset_token": token})
+		c.JSON(http.StatusOK, gin.H{"message": "Un code a été envoyé à votre adresse mail"})
 	}
 }
 
 func ResetPassword(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var request struct {
-			Token       string `json:"token"`
+			Email       string `json:"email"`
+			Code        string `json:"code"`
 			NewPassword string `json:"new_password"`
 		}
 
@@ -153,13 +161,13 @@ func ResetPassword(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		claims, err := utils.VerifyResetToken(request.Token)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token invalide ou expiré"})
+		valid, err := config.VerifyResetCode(db, request.Email, request.Code)
+		if err != nil || !valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Code invalide ou expiré"})
 			return
 		}
-		
-		user, err := config.GetUserByEmail(db, claims.Issuer)
+
+		user, err := config.GetUserByEmail(db, request.Email)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -170,16 +178,15 @@ func ResetPassword(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors du hachage du mot de passe"})
 			return
 		}
-		user.Password = string(hashedPassword)
+
+		err = config.UpdatePassword(db, user.ID, string(hashedPassword))
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de la recuperation de l'ID"})
-			log.Fatal("Erreur lors de la recuperation de l'ID :", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la mise à jour"})
+			return
 		}
-		err = config.UpdatePassword(db, user.ID, user.Password)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de la mise à jour du mot de passe"})
-			log.Fatal("Erreur lors de la mise à jour du mot de passe :", err)
-		}
+
+		_ = config.DeleteResetCode(db, request.Email)
+
 		c.JSON(http.StatusOK, gin.H{"message": "Mot de passe réinitialisé avec succès"})
 	}
 }
