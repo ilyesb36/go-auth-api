@@ -96,11 +96,11 @@ func Logout(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
 		bearerToken := token[7:]
-		invalide, err := repos.TokenRepository.TokenIsInvalidate(token)
+		invalide, err := repos.TokenRepository.TokenIsInvalidate(bearerToken)
 		if invalide {
 			c.JSON(http.StatusNoContent, gin.H{})
 		}
-		email, timestamp, err := utils.ExtractEmailAndExpFromJWT(token)
+		email, timestamp, err := utils.ExtractEmailAndExpFromJWT(bearerToken)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de l'extraction de l'expiration"})
 		}
