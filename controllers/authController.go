@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"database/sql"
+	"fmt"
+	"log"
+	"math/rand"
 	"net/http"
 	"time"
-	"log"
-	"fmt"
-	"math/rand"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -32,7 +32,7 @@ func Register(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la verification de l'email"})
 			return
 		}
-		if exists == true {
+		if exists {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Email déjà utilisé"})
 			return
 		}
@@ -128,7 +128,6 @@ func ForgotPassword(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Toujours renvoyer un message générique pour ne pas révéler si l'email est valide
 		user, err := config.GetUserByEmail(db, request.Email)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"message": "Un code a été envoyé à votre adresse mail"})
