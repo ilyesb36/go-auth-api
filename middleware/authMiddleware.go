@@ -1,16 +1,16 @@
 package middlewares
 
 import (
-	"database/sql"
 	"net/http"
 	"strings"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/ilyesb36/go-auth-api/config"
+	"github.com/ilyesb36/go-auth-api/repositories"
 )
 
-func AuthMiddleware(db *sql.DB) gin.HandlerFunc {
+func AuthMiddleware(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -26,7 +26,8 @@ func AuthMiddleware(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		invalide, err := config.TokenIsInvalidate(db, tokenString)
+		invalide, err := repos.TokenRepository.TokenIsInvalidate(tokenString)
+
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Internal server error"})
 			c.Abort()
@@ -40,7 +41,7 @@ func AuthMiddleware(db *sql.DB) gin.HandlerFunc {
 
 		claims := &jwt.RegisteredClaims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte(config.GetEnv("JWT_SECRET", "secret")), nil
+			return []byte(os.Getenv("JWT_SECRET")), nil
 		})
 
 		if err != nil || !token.Valid {

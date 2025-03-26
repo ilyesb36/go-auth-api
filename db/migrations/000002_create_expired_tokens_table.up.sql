@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS expired (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    token TEXT NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
