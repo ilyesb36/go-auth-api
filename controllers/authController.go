@@ -95,6 +95,7 @@ func Login(repos *repositories.Repositories) gin.HandlerFunc {
 func Logout(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
+		bearerToken := token[7:]
 		invalide, err := repos.TokenRepository.TokenIsInvalidate(token)
 		if invalide {
 			c.JSON(http.StatusNoContent, gin.H{})
@@ -102,12 +103,10 @@ func Logout(repos *repositories.Repositories) gin.HandlerFunc {
 		email, timestamp, err := utils.ExtractEmailAndExpFromJWT(token)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de l'extraction de l'expiration"})
-			log.Fatal("Erreur lors de l'invalidation du token :", err)
 		}
 		userID, err := repos.UserRepository.GetUserIDByEmail(email)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la recuperation de l'ID"})
-			log.Fatal("Erreur lors de la recuperation de l'ID :", err)
 		}
 		expiresAt := time.Unix(timestamp, 0)
 
@@ -237,6 +236,6 @@ func Me(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"Nom": user.Name})
+		c.JSON(http.StatusOK, gin.H{"Nom": user.Name, user.Email})
 	}
 }
