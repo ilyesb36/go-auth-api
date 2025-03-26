@@ -8,4 +8,5 @@ type ResetCode struct {
 	Email     string
 	Code      string
 	ExpiresAt time.Time
+
 }

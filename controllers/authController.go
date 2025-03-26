@@ -123,7 +123,6 @@ func Logout(repos *repositories.Repositories) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"message": "Session terminée"})
 	}
 }
-
 func ForgotPassword(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var request struct {
@@ -135,14 +134,17 @@ func ForgotPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 
+		// Toujours renvoyer un message générique pour ne pas révéler si l'email est valide
 		user, err := repos.UserRepository.GetUserByEmail(request.Email)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"message": "Un code a été envoyé à votre adresse mail"})
 			return
 		}
+
 		code := fmt.Sprintf("%06d", rand.Intn(1000000))
 		expiresAt := time.Now().Add(5 * time.Minute)
 		err = repos.ResetCodeRepository.InsertResetCode(user.Email, code, expiresAt)
+
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur enregistrement code"})
 			return
@@ -167,12 +169,15 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 		}
 
 		valid, err := repos.ResetCodeRepository.VerifyResetCode(request.Email, request.Code)
+
 		if err != nil || !valid {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Code invalide ou expiré"})
 			return
 		}
 
+
 		user, err := repos.UserRepository.GetUserByEmail(request.Email)
+
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -184,13 +189,17 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 
+
 		err = repos.UserRepository.UpdatePassword(user.ID, string(hashedPassword))
+
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la mise à jour"})
 			return
 		}
 
+
 		_ = repos.ResetCodeRepository.DeleteResetCode(request.Email)
+
 
 		c.JSON(http.StatusOK, gin.H{"message": "Mot de passe réinitialisé avec succès"})
 	}

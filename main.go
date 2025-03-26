@@ -8,7 +8,6 @@ import (
 )
 
 func main() {
-
 	r := gin.Default()
 
 	r.GET("/fcd03abc-eca5-4cec-99c1-ab79b571e90f/health", func(c *gin.Context) {
