@@ -18,6 +18,10 @@ WORKDIR /app
 
 COPY --from=builder /app/main .
 
+COPY --from=builder /go/bin/migrate /usr/local/bin/migrate
+COPY --from=builder /app/db /app/db
+RUN chmod +x /usr/local/bin/migrate
+
 EXPOSE 8080
 
 CMD ["./main"]
