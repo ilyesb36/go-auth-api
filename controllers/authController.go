@@ -72,7 +72,7 @@ func Login(repos *repositories.Repositories) gin.HandlerFunc {
 
 		user, err := repos.UserRepository.GetUserByEmail(loginData.Email)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
 		}
 
