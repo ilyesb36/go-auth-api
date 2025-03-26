@@ -45,11 +45,11 @@ func ApplyMigrations() {
 	var cmd *exec.Cmd
 
 	if migrateVersion == "" {
-		cmd = exec.Command("migrate", "-database",connect_string , "-path", "db/migrations","up")
+		cmd = exec.Command("migrate", "-database",connect_string , "-path", "./db/migrations","up")
 	}else{
 		migrateVersion = fmt.Sprintf("%06s", migrateVersion)
 		fmt.Println("migrateVersion:", migrateVersion)
-		cmd = exec.Command("migrate", "-database",connect_string , "-path", "db/migrations","goto", migrateVersion)
+		cmd = exec.Command("migrate", "-database",connect_string , "-path", "./db/migrations","goto", migrateVersion)
 	}
 	
 	
