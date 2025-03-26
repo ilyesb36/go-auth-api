@@ -213,7 +213,7 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 
 		_ = repos.ResetCodeRepository.DeleteResetCode(request.Email)
 
-		c.JSON(http.StatusOK, gin.H{"message": "Mot de passe réinitialisé avec succès"})
+		c.JSON(http.StatusNoContent, gin.H{"message": "Mot de passe réinitialisé avec succès"})
 	}
 }
 
