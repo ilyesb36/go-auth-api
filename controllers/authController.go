@@ -1,15 +1,12 @@
 package controllers
 
 import (
-	"net/http"
 	"time"
-	"log"
 	"os"
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -98,14 +95,18 @@ func Login(repos *repositories.Repositories) gin.HandlerFunc {
 func Logout(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
+		invalide, err := repos.TokenRepository.TokenIsInvalidate(token)
+		if invalide{
+			c.JSON(http.StatusNoContent, gin.H{})
+		}
 		email, timestamp, err := utils.ExtractEmailAndExpFromJWT(token)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de l'extraction de l'expiration"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de l'extraction de l'expiration"})
 			log.Fatal("Erreur lors de l'invalidation du token :", err)
 		}
 		userID, err := repos.UserRepository.GetUserIDByEmail(email)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de la recuperation de l'ID"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la recuperation de l'ID"})
 			log.Fatal("Erreur lors de la recuperation de l'ID :", err)
 		}
 		expiresAt := time.Unix(timestamp, 0)
@@ -115,12 +116,12 @@ func Logout(repos *repositories.Repositories) gin.HandlerFunc {
 			Token:     token,
 			ExpiresAt: expiresAt,
 		}
+
 		_, err = repos.TokenRepository.InsertToken(expiredToken)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de la deconnexion"})
-			log.Fatal("Erreur lors de l'invalidation du token :", err)
+			c.JSON(http.StatusNoContent, gin.H{})
 		}
-		c.JSON(http.StatusOK, gin.H{"message": "Session terminée"})
+		c.JSON(http.StatusNoContent, gin.H{})
 	}
 }
 func ForgotPassword(repos *repositories.Repositories) gin.HandlerFunc {
@@ -152,7 +153,21 @@ func ForgotPassword(repos *repositories.Repositories) gin.HandlerFunc {
 		}
 		_ = utils.SendResetCodeEmail(user.Email, code)
 
-		c.JSON(http.StatusOK, gin.H{"message": "Un code a été envoyé à votre adresse mail"})
+		expirationTime := time.Now().Add(time.Hour)
+		claims := &jwt.RegisteredClaims{
+			Issuer:    user.Email,
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la création du token"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Un code a été envoyé à votre adresse mail",
+			"token": tokenString,
+		})
 	}
 }
 
@@ -168,13 +183,16 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Format invalide"})
 			return
 		}
-
-		valid, err := repos.ResetCodeRepository.VerifyResetCode(request.Email, request.Code)
-
-		if err != nil || !valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Code invalide ou expiré"})
-			return
+		token := c.GetHeader("Authorization")
+		if token == ""{
+			valid, err := repos.ResetCodeRepository.VerifyResetCode(request.Email, request.Code)
+		
+			if err != nil || !valid {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Code invalide ou expiré"})
+				return
+			}
 		}
+
 
 
 		user, err := repos.UserRepository.GetUserByEmail(request.Email)
