@@ -71,6 +71,12 @@ func Login(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 
+		if loginData.Email == "" || loginData.Password == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Tous les champs sont obligatoires"})
+			log.Println("Tous les champs sont obligatoires")
+			return
+		}
+
 		user, err := repos.UserRepository.GetUserByEmail(loginData.Email)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
