@@ -208,11 +208,11 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			Code        string `json:"token"`
 			NewPassword string `json:"new_password"`
 		}
-		if request.Code == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Token est obligatoire"})
-			log.Println("Token est obligatoire")
-			return
-		}
+		// if request.Code == "" {
+		// 	c.JSON(http.StatusBadRequest, gin.H{"error": "Token est obligatoire"})
+		// 	log.Println("Token est obligatoire")
+		// 	return
+		// }
 		// if request.NewPassword == "" {
 		// 	c.JSON(http.StatusBadRequest, gin.H{"error": "NewPassword est obligatoire"})
 		// 	log.Println("NewPassword est obligatoire")
