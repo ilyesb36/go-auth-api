@@ -71,16 +71,22 @@ func Login(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 
-		if loginData.Email == "" || loginData.Password == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Tous les champs sont obligatoires"})
-			log.Println("Tous les champs sont obligatoires")
+		if loginData.Email == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Email sont obligatoires"})
+			log.Println("Email sont obligatoires")
+			return
+		}
+
+		if loginData.Password == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Passwordsont obligatoires"})
+			log.Println("Password sont obligatoires")
 			return
 		}
 
 		user, err := repos.UserRepository.GetUserByEmail(loginData.Email)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Println("Erreur lors de la recuperation de l'utilisateur :", err)
+			log.Println("Erreur lors de la recuperation de l'utilisateur :", err.Error())
 			return
 		}
 
