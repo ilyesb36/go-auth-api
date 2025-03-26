@@ -25,19 +25,20 @@ func AuthMiddleware(repos *repositories.Repositories) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-	
+
 		invalide, err := repos.TokenRepository.TokenIsInvalidate(tokenString)
+
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Internal server error"})
 			c.Abort()
 			return
 		}
-		if invalide == true {
+		if invalide {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token is invalidate"})
 			c.Abort()
 			return
 		}
-	
+
 		claims := &jwt.RegisteredClaims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(os.Getenv("JWT_SECRET")), nil

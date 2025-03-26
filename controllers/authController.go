@@ -6,7 +6,10 @@ import (
 	"log"
 	"os"
 	"fmt"
+	"log"
 	"math/rand"
+	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -16,9 +19,6 @@ import (
 	"github.com/ilyesb36/go-auth-api/repositories"
 	"github.com/ilyesb36/go-auth-api/utils"
 )
-
-
-var resetCodes = make(map[string]string)
 
 func Register(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -33,7 +33,7 @@ func Register(repos *repositories.Repositories) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la verification de l'email"})
 			return
 		}
-		if exists == true {
+		if exists {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Email déjà utilisé"})
 			return
 		}
@@ -133,6 +133,7 @@ func ForgotPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Format invalide"})
 			return
 		}
+
 
 		// Toujours renvoyer un message générique pour ne pas révéler si l'email est valide
 		user, err := repos.UserRepository.GetUserByEmail(request.Email)
