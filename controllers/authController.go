@@ -243,6 +243,8 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 func Me(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
+		log.Println("Authorization Header:", token)
+
 		if token == "" || !strings.HasPrefix(token, "Bearer ") {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token manquant ou invalide"})
 			return
@@ -251,15 +253,15 @@ func Me(repos *repositories.Repositories) gin.HandlerFunc {
 		bearerToken := token[7:]
 		email, _, err := utils.ExtractEmailAndExpFromJWT(bearerToken)
 		if err != nil {
+			log.Println("JWT Extraction Error:", err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token invalide"})
-			log.Println("Erreur lors de l'extraction de l'email :", err)
 			return
 		}
 
 		user, err := repos.UserRepository.GetUserByEmail(email)
 		if err != nil {
+			log.Println("User Not Found:", err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Utilisateur non trouvé"})
-			log.Println("Erreur lors de la récupération de l'utilisateur :", err)
 			return
 		}
 
