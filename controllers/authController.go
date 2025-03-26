@@ -1,14 +1,12 @@
 package controllers
 
 import (
-
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"time"
-
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -98,7 +96,7 @@ func Logout(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
 		invalide, err := repos.TokenRepository.TokenIsInvalidate(token)
-		if invalide{
+		if invalide {
 			c.JSON(http.StatusNoContent, gin.H{})
 		}
 		email, timestamp, err := utils.ExtractEmailAndExpFromJWT(token)
@@ -167,7 +165,7 @@ func ForgotPassword(repos *repositories.Repositories) gin.HandlerFunc {
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Un code a été envoyé à votre adresse mail",
-			"token": tokenString,
+			"token":   tokenString,
 		})
 	}
 }
@@ -185,9 +183,9 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 		token := c.GetHeader("Authorization")
-		if token == ""{
+		if token == "" {
 			valid, err := repos.ResetCodeRepository.VerifyResetCode(request.Email, request.Code)
-		
+
 			if err != nil || !valid {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Code invalide ou expiré"})
 				return
@@ -223,7 +221,8 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 func Me(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
-		email, _, err := utils.ExtractEmailAndExpFromJWT(token)
+		bearerToken := token[7:]
+		email, _, err := utils.ExtractEmailAndExpFromJWT(bearerToken)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de l'extraction de l'email"})
 			log.Fatal("Erreur lors de l'extraction de l'email :", err)
