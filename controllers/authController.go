@@ -182,7 +182,8 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 		token := c.GetHeader("Authorization")
-		if token == "" {
+		bearerToken := token[7:]
+		if bearerToken == "" {
 			valid, err := repos.ResetCodeRepository.VerifyResetCode(request.Email, request.Code)
 
 			if err != nil || !valid {
