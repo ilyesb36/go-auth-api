@@ -210,14 +210,14 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 		}
 		if request.Code == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Token est obligatoire"})
-			log.Println("Email est obligatoire")
+			log.Println("Token est obligatoire")
 			return
 		}
-		if request.NewPassword == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "NewPassword est obligatoire"})
-			log.Println("Email est obligatoire")
-			return
-		}
+		// if request.NewPassword == "" {
+		// 	c.JSON(http.StatusBadRequest, gin.H{"error": "NewPassword est obligatoire"})
+		// 	log.Println("NewPassword est obligatoire")
+		// 	return
+		// }
 		if err := c.ShouldBindJSON(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Format invalide"})
 			return
