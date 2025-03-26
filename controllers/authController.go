@@ -5,6 +5,8 @@ import (
 	"time"
 	"log"
 	"os"
+	"fmt"
+	"math/rand"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -12,7 +14,11 @@ import (
 
 	"github.com/ilyesb36/go-auth-api/models"
 	"github.com/ilyesb36/go-auth-api/repositories"
+	"github.com/ilyesb36/go-auth-api/utils"
 )
+
+
+var resetCodes = make(map[string]string)
 
 func Register(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -92,7 +98,7 @@ func Login(repos *repositories.Repositories) gin.HandlerFunc {
 func Logout(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
-		email, timestamp, err := repos.TokenRepository.ExtractEmailAndExpFromJWT(token)
+		email, timestamp, err := utils.ExtractEmailAndExpFromJWT(token)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de l'extraction de l'expiration"})
 			log.Fatal("Erreur lors de l'invalidation du token :", err)
@@ -131,24 +137,27 @@ func ForgotPassword(repos *repositories.Repositories) gin.HandlerFunc {
 
 		user, err := repos.UserRepository.GetUserByEmail(request.Email)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusOK, gin.H{"message": "Un code a été envoyé à votre adresse mail"})
 			return
 		}
-
-		token, err := repos.TokenRepository.GenerateResetToken(user.Email)
+		code := fmt.Sprintf("%06d", rand.Intn(1000000))
+		expiresAt := time.Now().Add(5 * time.Minute)
+		err = repos.ResetCodeRepository.InsertResetCode(user.Email, code, expiresAt)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la génération du token"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur enregistrement code"})
 			return
 		}
+		_ = utils.SendResetCodeEmail(user.Email, code)
 
-		c.JSON(http.StatusOK, gin.H{"message": "Token généré", "reset_token": token})
+		c.JSON(http.StatusOK, gin.H{"message": "Un code a été envoyé à votre adresse mail"})
 	}
 }
 
 func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var request struct {
-			Token       string `json:"token"`
+			Email       string `json:"email"`
+			Code        string `json:"code"`
 			NewPassword string `json:"new_password"`
 		}
 
@@ -157,13 +166,13 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 
-		claims, err := repos.TokenRepository.VerifyResetToken(request.Token)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token invalide ou expiré"})
+		valid, err := repos.ResetCodeRepository.VerifyResetCode(request.Email, request.Code)
+		if err != nil || !valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Code invalide ou expiré"})
 			return
 		}
-		
-		user, err := repos.UserRepository.GetUserByEmail(claims.Issuer)
+
+		user, err := repos.UserRepository.GetUserByEmail(request.Email)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -174,16 +183,15 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors du hachage du mot de passe"})
 			return
 		}
-		user.Password = string(hashedPassword)
+
+		err = repos.UserRepository.UpdatePassword(user.ID, string(hashedPassword))
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de la recuperation de l'ID"})
-			log.Fatal("Erreur lors de la recuperation de l'ID :", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la mise à jour"})
+			return
 		}
-		err = repos.UserRepository.UpdatePassword(user.ID, user.Password)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de la mise à jour du mot de passe"})
-			log.Fatal("Erreur lors de la mise à jour du mot de passe :", err)
-		}
+
+		_ = repos.ResetCodeRepository.DeleteResetCode(request.Email)
+
 		c.JSON(http.StatusOK, gin.H{"message": "Mot de passe réinitialisé avec succès"})
 	}
 }
