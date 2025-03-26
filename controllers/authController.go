@@ -159,9 +159,16 @@ func ForgotPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 
+		if request.Email == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Email est obligatoire"})
+			log.Println("Email est obligatoire")
+			return
+		}
+	
 		// Toujours renvoyer un message générique pour ne pas révéler si l'email est valide
 		user, err := repos.UserRepository.GetUserByEmail(request.Email)
 		if err != nil {
+			log.Println("Un code a été envoyé à votre adresse mail")
 			c.JSON(http.StatusOK, gin.H{"message": "Un code a été envoyé à votre adresse mail"})
 			return
 		}
@@ -171,6 +178,7 @@ func ForgotPassword(repos *repositories.Repositories) gin.HandlerFunc {
 		err = repos.ResetCodeRepository.InsertResetCode(user.Email, code, expiresAt)
 
 		if err != nil {
+			log.Println("Erreur enregistrement code")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur enregistrement code"})
 			return
 		}
@@ -245,7 +253,6 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 func Me(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
-		log.Println("Authorization Header:", token)
 
 		if token == "" || !strings.HasPrefix(token, "Bearer ") {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token manquant ou invalide"})
