@@ -72,13 +72,13 @@ func Login(repos *repositories.Repositories) gin.HandlerFunc {
 
 		user, err := repos.UserRepository.GetUserByEmail(loginData.Email)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
 		}
 
 		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password))
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Mot de passe incorrect"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Mot de passe incorrect"})
 			return
 		}
 
