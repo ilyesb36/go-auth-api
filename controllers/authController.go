@@ -236,6 +236,6 @@ func Me(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"Nom": user.Name, user.Email})
+		c.JSON(http.StatusOK, gin.H{"name": user.Name, "user": user.Email})
 	}
 }
