@@ -1,69 +1,48 @@
-package controllers_test
+package controllers
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/ilyesb36/go-auth-api/controllers"
-
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/ilyesb36/go-auth-api/models"
+	"github.com/ilyesb36/go-auth-api/repositories"
+	"github.com/stretchr/testify/assert"
 )
 
-func setupRouter(db *sql.DB) *gin.Engine {
-	r := gin.Default()
-	r.POST("/register", controllers.Register(db))
-	r.POST("/login", controllers.Login(db))
-	return r
-}
-
-func setupDatabase(db *sql.DB) {
-	createTableQuery := `
-	CREATE TABLE IF NOT EXISTS users (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT NOT NULL,
-		email TEXT NOT NULL UNIQUE,
-		password TEXT NOT NULL
-	);
-	`
-	_, err := db.Exec(createTableQuery)
-	if err != nil {
-		log.Fatal("Error creating table: ", err)
-	}
-}
-
 func TestRegister(t *testing.T) {
-	db, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		log.Fatal(err)
+	mockUserRepo := &repositories.UserRepositoryMock{}
+	repos := &repositories.Repositories{
+		UserRepository: mockUserRepo,
 	}
-	defer db.Close()
 
-	setupDatabase(db)
-
-	router := setupRouter(db)
-
-	user := map[string]string{
-		"name":     "Test User",
-		"email":    "test@example.com",
-		"password": "password123",
+	user := models.User{
+		Email:    "testuser1@example.com",
+		Password: "password123",
 	}
-	jsonValue, _ := json.Marshal(user)
 
-	req, _ := http.NewRequest("POST", "/register", bytes.NewBuffer(jsonValue))
-	req.Header.Set("Content-Type", "application/json")
+	userJSON, err := json.Marshal(user)
+	assert.NoError(t, err)
+
+	r := gin.Default()
+	r.POST("/register", controllers.Register(repos))
+
+	req, err := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(userJSON))
+	assert.NoError(t, err)
 
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	log.Printf("Response: %s", w.Body.String())
+	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusCreated, w.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "Inscription réussie", response["message"])
+
+	t.Log("Réponse:", w.Body.String())
 }
