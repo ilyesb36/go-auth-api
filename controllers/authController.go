@@ -17,7 +17,7 @@ import (
 	"github.com/ilyesb36/go-auth-api/utils"
 )
 
-var resetCodes = make(map[string]string)
+// var resetCodes = make(map[string]string)
 
 func Register(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {

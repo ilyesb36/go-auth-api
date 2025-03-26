@@ -25,7 +25,6 @@ func setupRouter(db *sql.DB) *gin.Engine {
 }
 
 func setupDatabase(db *sql.DB) {
-	// Crée la table users si elle n'existe pas
 	createTableQuery := `
 	CREATE TABLE IF NOT EXISTS users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,

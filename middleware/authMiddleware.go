@@ -25,19 +25,19 @@ func AuthMiddleware(db *sql.DB) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-	
+
 		invalide, err := config.TokenIsInvalidate(db, tokenString)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Internal server error"})
 			c.Abort()
 			return
 		}
-		if invalide == true {
+		if invalide {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token is invalidate"})
 			c.Abort()
 			return
 		}
-	
+
 		claims := &jwt.RegisteredClaims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(config.GetEnv("JWT_SECRET", "secret")), nil
