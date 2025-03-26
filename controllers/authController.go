@@ -225,13 +225,16 @@ func Me(repos *repositories.Repositories) gin.HandlerFunc {
 		email, _, err := utils.ExtractEmailAndExpFromJWT(bearerToken)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de l'extraction de l'email"})
-			log.Fatal("Erreur lors de l'extraction de l'email :", err)
+			log.Println("Erreur lors de l'extraction de l'email :", err)
+			return
+
 		}
 
 		user, err := repos.UserRepository.GetUserByEmail(email)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de la recuperation de l'utilisateur"})
-			log.Fatal("Erreur lors de la recuperation de l'utilisateur :", err)
+			log.Println("Erreur lors de la recuperation de l'utilisateur :", err)
+			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{"Nom": user.Name})
