@@ -21,12 +21,13 @@ func Register(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var user models.User
 
-		if user.Email == "" || user.Password == "" || user.Name == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Tous les champs sont obligatoires"})
-			return
-		}
 		if err := c.ShouldBindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if user.Email == "" || user.Password == "" || user.Name == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Tous les champs sont obligatoires"})
 			return
 		}
 
