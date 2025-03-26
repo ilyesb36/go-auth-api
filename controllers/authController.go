@@ -1,12 +1,14 @@
 package controllers
 
 import (
-	"time"
-	"os"
+
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
+	"time"
+
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -135,7 +137,6 @@ func ForgotPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 
-
 		// Toujours renvoyer un message générique pour ne pas révéler si l'email est valide
 		user, err := repos.UserRepository.GetUserByEmail(request.Email)
 		if err != nil {
@@ -193,8 +194,6 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			}
 		}
 
-
-
 		user, err := repos.UserRepository.GetUserByEmail(request.Email)
 
 		if err != nil {
@@ -208,7 +207,6 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 
-
 		err = repos.UserRepository.UpdatePassword(user.ID, string(hashedPassword))
 
 		if err != nil {
@@ -216,9 +214,7 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 
-
 		_ = repos.ResetCodeRepository.DeleteResetCode(request.Email)
-
 
 		c.JSON(http.StatusOK, gin.H{"message": "Mot de passe réinitialisé avec succès"})
 	}
