@@ -20,6 +20,11 @@ import (
 func Register(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var user models.User
+
+		if user.Email == "" || user.Password == "" || user.Name == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Tous les champs sont obligatoires"})
+			return
+		}
 		if err := c.ShouldBindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -237,5 +242,39 @@ func Me(repos *repositories.Repositories) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"email": user.Email})
+	}
+}
+
+func RefreshToken(repos *repositories.Repositories) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := c.GetHeader("Authorization")
+		bearerToken := token[7:]
+		email, _, err := utils.ExtractEmailAndExpFromJWT(bearerToken)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de l'extraction de l'email"})
+			log.Println("Erreur lors de l'extraction de l'email :", err)
+			return
+		}
+
+		user, err := repos.UserRepository.GetUserByEmail(email)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de la recuperation de l'utilisateur"})
+			log.Println("Erreur lors de la recuperation de l'utilisateur :", err)
+			return
+		}
+
+		expirationTime := time.Now().Add(time.Hour)
+		claims := &jwt.RegisteredClaims{
+			Issuer:    user.Email,
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+		}
+		newToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		tokenString, err := newToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la création du token"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"token": tokenString})
 	}
 }
