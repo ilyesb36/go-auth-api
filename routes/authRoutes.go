@@ -17,5 +17,6 @@ func AuthRoutes(r *gin.Engine, repos *repositories.Repositories) {
 		authGroup.POST("/forgot-password", controllers.ForgotPassword(repos))
 		authGroup.GET("/me", middlewares.AuthMiddleware(repos), controllers.Me(repos))
 		authGroup.POST("/reset-password", controllers.ResetPassword(repos))
+		authGroup.POST("/refresh-token", controllers.RefreshToken(repos))
 	}
 }

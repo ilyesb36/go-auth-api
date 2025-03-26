@@ -67,18 +67,21 @@ func Login(repos *repositories.Repositories) gin.HandlerFunc {
 
 		if err := c.ShouldBindJSON(&loginData); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Println("Erreur lors du binding des données de connexion :", err)
 			return
 		}
 
 		user, err := repos.UserRepository.GetUserByEmail(loginData.Email)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			log.Println("Erreur lors de la recuperation de l'utilisateur :", err)
 			return
 		}
 
 		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password))
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Mot de passe incorrect"})
+			log.Println("Mot de passe incorrect")
 			return
 		}
 
@@ -91,6 +94,7 @@ func Login(repos *repositories.Repositories) gin.HandlerFunc {
 		tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la création du token"})
+			log.Println("Erreur lors de la création du token :", err)
 			return
 		}
 
