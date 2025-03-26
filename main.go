@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ilyesb36/go-auth-api/routes"
 	"github.com/ilyesb36/go-auth-api/config"
+	"github.com/ilyesb36/go-auth-api/repositories"
 )
 
 func main() {
@@ -13,10 +14,14 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
+	config.ApplyMigrations()
+
 	db := config.ConnectDB()
 	defer db.Close()
 
-	routes.AuthRoutes(r, db)
+	repos := repositories.NewRepositories(db)
+
+	routes.AuthRoutes(r, repos)
 
 	err := r.Run(":8080")
 	if err != nil {

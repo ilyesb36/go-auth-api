@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS reset_codes (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    code TEXT NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+);

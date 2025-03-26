@@ -1,10 +1,10 @@
 package controllers
 
 import (
-	"database/sql"
 	"net/http"
 	"time"
 	"log"
+	"os"
 	"fmt"
 	"math/rand"
 
@@ -12,14 +12,15 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/ilyesb36/go-auth-api/config"
 	"github.com/ilyesb36/go-auth-api/models"
+	"github.com/ilyesb36/go-auth-api/repositories"
 	"github.com/ilyesb36/go-auth-api/utils"
 )
 
+
 var resetCodes = make(map[string]string)
 
-func Register(db *sql.DB) gin.HandlerFunc {
+func Register(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var user models.User
 		if err := c.ShouldBindJSON(&user); err != nil {
@@ -27,7 +28,7 @@ func Register(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		exists, err := config.EmailExists(db, user.Email)
+		exists, err := repos.UserRepository.EmailExists(user.Email)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la verification de l'email"})
 			return
@@ -44,7 +45,7 @@ func Register(db *sql.DB) gin.HandlerFunc {
 		}
 		user.Password = string(hashedPassword)
 
-		_, err = config.InsertUser(db, &user)
+		_, err = repos.UserRepository.InsertUser(&user)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -54,7 +55,7 @@ func Register(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-func Login(db *sql.DB) gin.HandlerFunc {
+func Login(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var loginData struct {
 			Email    string `json:"email"`
@@ -66,7 +67,7 @@ func Login(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		user, err := config.GetUserByEmail(db, loginData.Email)
+		user, err := repos.UserRepository.GetUserByEmail(loginData.Email)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -84,7 +85,7 @@ func Login(db *sql.DB) gin.HandlerFunc {
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		}
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-		tokenString, err := token.SignedString([]byte(config.GetEnv("JWT_SECRET", "secret")))
+		tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la création du token"})
 			return
@@ -94,7 +95,7 @@ func Login(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-func Logout(db *sql.DB) gin.HandlerFunc {
+func Logout(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
 		email, timestamp, err := utils.ExtractEmailAndExpFromJWT(token)
@@ -102,14 +103,19 @@ func Logout(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de l'extraction de l'expiration"})
 			log.Fatal("Erreur lors de l'invalidation du token :", err)
 		}
-		userID, err := config.GetUserIDByEmail(db, email)
+		userID, err := repos.UserRepository.GetUserIDByEmail(email)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de la recuperation de l'ID"})
 			log.Fatal("Erreur lors de la recuperation de l'ID :", err)
 		}
 		expiresAt := time.Unix(timestamp, 0)
 
-		_, err = config.InsertToken(db, userID, token, expiresAt)
+		expiredToken := &models.Expired{
+			UserID:    userID,
+			Token:     token,
+			ExpiresAt: expiresAt,
+		}
+		_, err = repos.TokenRepository.InsertToken(expiredToken)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de la deconnexion"})
 			log.Fatal("Erreur lors de l'invalidation du token :", err)
@@ -117,7 +123,7 @@ func Logout(db *sql.DB) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"message": "Session terminée"})
 	}
 }
-func ForgotPassword(db *sql.DB) gin.HandlerFunc {
+func ForgotPassword(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var request struct {
 			Email string `json:"email"`
@@ -129,7 +135,7 @@ func ForgotPassword(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Toujours renvoyer un message générique pour ne pas révéler si l'email est valide
-		user, err := config.GetUserByEmail(db, request.Email)
+		user, err := repos.UserRepository.GetUserByEmail(request.Email)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"message": "Un code a été envoyé à votre adresse mail"})
 			return
@@ -137,7 +143,8 @@ func ForgotPassword(db *sql.DB) gin.HandlerFunc {
 
 		code := fmt.Sprintf("%06d", rand.Intn(1000000))
 		expiresAt := time.Now().Add(5 * time.Minute)
-		err = config.InsertResetCode(db, user.Email, code, expiresAt)
+		err = repos.ResetCodeRepository.InsertResetCode(user.Email, code, expiresAt)
+
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur enregistrement code"})
 			return
@@ -148,7 +155,7 @@ func ForgotPassword(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-func ResetPassword(db *sql.DB) gin.HandlerFunc {
+func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var request struct {
 			Email       string `json:"email"`
@@ -161,13 +168,16 @@ func ResetPassword(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		valid, err := config.VerifyResetCode(db, request.Email, request.Code)
+		valid, err := repos.ResetCodeRepository.VerifyResetCode(request.Email, request.Code)
+
 		if err != nil || !valid {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Code invalide ou expiré"})
 			return
 		}
 
-		user, err := config.GetUserByEmail(db, request.Email)
+
+		user, err := repos.UserRepository.GetUserByEmail(request.Email)
+
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -179,13 +189,17 @@ func ResetPassword(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		err = config.UpdatePassword(db, user.ID, string(hashedPassword))
+
+		err = repos.UserRepository.UpdatePassword(user.ID, string(hashedPassword))
+
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la mise à jour"})
 			return
 		}
 
-		_ = config.DeleteResetCode(db, request.Email)
+
+		_ = repos.ResetCodeRepository.DeleteResetCode(request.Email)
+
 
 		c.JSON(http.StatusOK, gin.H{"message": "Mot de passe réinitialisé avec succès"})
 	}
