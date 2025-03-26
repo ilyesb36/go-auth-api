@@ -172,8 +172,7 @@ func ForgotPassword(repos *repositories.Repositories) gin.HandlerFunc {
 func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var request struct {
-			Email       string `json:"email"`
-			Code        string `json:"code"`
+			Code        string `json:"token"`
 			NewPassword string `json:"new_password"`
 		}
 
@@ -181,10 +180,10 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Format invalide"})
 			return
 		}
-		token := c.GetHeader("Authorization")
-		bearerToken := token[7:]
-		if bearerToken == "" {
-			valid, err := repos.ResetCodeRepository.VerifyResetCode(request.Email, request.Code)
+		token := request.Code
+		email, err := utils.ExtractEmailFromJWT(token)
+		if token == "" {
+			valid, err := repos.ResetCodeRepository.VerifyResetCode(email, request.Code)
 
 			if err != nil || !valid {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Code invalide ou expiré"})
@@ -192,7 +191,7 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			}
 		}
 
-		user, err := repos.UserRepository.GetUserByEmail(request.Email)
+		user, err := repos.UserRepository.GetUserByEmail(email)
 
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -212,7 +211,7 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 
-		_ = repos.ResetCodeRepository.DeleteResetCode(request.Email)
+		_ = repos.ResetCodeRepository.DeleteResetCode(email)
 
 		c.JSON(http.StatusNoContent, gin.H{"message": "Mot de passe réinitialisé avec succès"})
 	}
