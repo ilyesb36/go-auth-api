@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -38,7 +39,7 @@ func Register(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 		if exists {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Email déjà utilisé"})
+			c.JSON(http.StatusConflict, gin.H{"error": "Email déjà utilisé"})
 			return
 		}
 
@@ -244,19 +245,25 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 func Me(repos *repositories.Repositories) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
+		log.Println("Authorization Header:", token)
+
+		if token == "" || !strings.HasPrefix(token, "Bearer ") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token manquant ou invalide"})
+			return
+		}
+
 		bearerToken := token[7:]
 		email, _, err := utils.ExtractEmailAndExpFromJWT(bearerToken)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de l'extraction de l'email"})
-			log.Println("Erreur lors de l'extraction de l'email :", err)
+			log.Println("JWT Extraction Error:", err)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token invalide"})
 			return
-
 		}
 
 		user, err := repos.UserRepository.GetUserByEmail(email)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de la recuperation de l'utilisateur"})
-			log.Println("Erreur lors de la recuperation de l'utilisateur :", err)
+			log.Println("User Not Found:", err)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Utilisateur non trouvé"})
 			return
 		}
 
