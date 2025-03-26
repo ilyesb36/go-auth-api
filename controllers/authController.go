@@ -37,7 +37,7 @@ func Register(repos *repositories.Repositories) gin.HandlerFunc {
 			return
 		}
 		if exists {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Email déjà utilisé"})
+			c.JSON(http.StatusConflict, gin.H{"error": "Email déjà utilisé"})
 			return
 		}
 
