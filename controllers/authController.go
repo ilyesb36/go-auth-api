@@ -137,7 +137,7 @@ func Logout(repos *repositories.Repositories) gin.HandlerFunc {
 
 		expiredToken := &models.Expired{
 			UserID:    userID,
-			Token:     token,
+			Token:     bearerToken,
 			ExpiresAt: expiresAt,
 		}
 
