@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/google/uuid"
 
 	"github.com/ilyesb36/go-auth-api/models"
 	"github.com/ilyesb36/go-auth-api/repositories"
@@ -72,21 +73,21 @@ func Login(repos *repositories.Repositories) gin.HandlerFunc {
 		}
 
 		if loginData.Email == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Email sont obligatoires"})
-			log.Println("Email sont obligatoires")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Email est obligatoire"})
+			log.Println("Email est obligatoire")
 			return
 		}
 
 		if loginData.Password == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Passwordsont obligatoires"})
-			log.Println("Password sont obligatoires")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Password est obligatoire"})
+			log.Println("Password est obligatoire")
 			return
 		}
 
 		user, err := repos.UserRepository.GetUserByEmail(loginData.Email)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-			log.Println("Erreur lors de la recuperation de l'utilisateur :", err.Error())
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Utilisateur introuvable"})
+			log.Println("Erreur lors de la récupération de l'utilisateur :", err.Error())
 			return
 		}
 
@@ -101,6 +102,7 @@ func Login(repos *repositories.Repositories) gin.HandlerFunc {
 		claims := &jwt.RegisteredClaims{
 			Issuer:    user.Email,
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			ID:        uuid.NewString(),
 		}
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 		tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
