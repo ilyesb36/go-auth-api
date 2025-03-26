@@ -1,10 +1,10 @@
 package routes
 
 import (
-	"github.com/ilyesb36/go-auth-api/repositories"
-	"github.com/ilyesb36/go-auth-api/controllers"
-	"github.com/ilyesb36/go-auth-api/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/ilyesb36/go-auth-api/controllers"
+	middlewares "github.com/ilyesb36/go-auth-api/middleware"
+	"github.com/ilyesb36/go-auth-api/repositories"
 )
 
 func AuthRoutes(r *gin.Engine, repos *repositories.Repositories) {
@@ -16,5 +16,6 @@ func AuthRoutes(r *gin.Engine, repos *repositories.Repositories) {
 		authGroup.POST("/logout", middlewares.AuthMiddleware(repos), controllers.Logout(repos))
 		authGroup.POST("/forgot-password", controllers.ForgotPassword(repos))
 		authGroup.POST("/reset-password", controllers.ResetPassword(repos))
+		authGroup.GET("/me", middlewares.AuthMiddleware(repos), controllers.Me(repos))
 	}
 }

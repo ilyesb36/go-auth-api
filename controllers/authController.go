@@ -197,3 +197,22 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"message": "Mot de passe réinitialisé avec succès"})
 	}
 }
+
+func Me(repos *repositories.Repositories) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := c.GetHeader("Authorization")
+		email, _, err := utils.ExtractEmailAndExpFromJWT(token)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de l'extraction de l'email"})
+			log.Fatal("Erreur lors de l'extraction de l'email :", err)
+		}
+
+		user, err := repos.UserRepository.GetUserByEmail(email)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Erreur lors de la recuperation de l'utilisateur"})
+			log.Fatal("Erreur lors de la recuperation de l'utilisateur :", err)
+		}
+
+		c.JSON(http.StatusOK, gin.H{"Nom": user.Name})
+	}
+}
