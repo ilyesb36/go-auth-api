@@ -228,7 +228,8 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 			valid, err := repos.ResetCodeRepository.VerifyResetCode(email, request.Code)
 
 			if err != nil || !valid {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Code invalide ou expiré"})
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Code invalide ou expiré"})
+				log.Println("Code invalide ou expiré")
 				return
 			}
 		}
@@ -236,6 +237,7 @@ func ResetPassword(repos *repositories.Repositories) gin.HandlerFunc {
 		user, err := repos.UserRepository.GetUserByEmail(email)
 
 		if err != nil {
+			log.Println("user not found")
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
